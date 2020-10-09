@@ -147,6 +147,12 @@ results(Y_test, yhat)
 
 # ANN
 i = Input(shape=(3))
+x = Dense(1024, activation='relu')(i)
+x = Dropout(0.1)(x)
+x = Dense(512, activation='relu')(i)
+x = Dropout(0.1)(x)
+x = Dense(256, activation='relu')(i)
+x = Dropout(0.1)(x)
 x = Dense(128, activation='relu')(i)
 x = Dropout(0.1)(x)
 x = Dense(64, activation='relu')(x)
@@ -186,4 +192,5 @@ results(Y_test, yhat)
 # regression, try more tests (anova, chi-squared tests, likelihood tests) to compare predictive ability of different
 # variables
 # - draw the random forest classifier
+# brining in more observations could improve the results greatly as the sample is quite small (ANN especially)
 
