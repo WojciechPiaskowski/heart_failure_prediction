@@ -7,6 +7,13 @@ import statsmodels.api as sm
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from tensorflow.keras.layers import Dense, Dropout, Input
+from tensorflow.keras.models import Model
+from tensorflow.keras.optimizers import Adam, SGD
 
 # style options
 pd.set_option('display.width', 400)
@@ -106,3 +113,77 @@ results(Y_test, yhat)
 
 # again, before going further we could do some more statistical inference, but lets focus on improving that F1-score
 # lets try different methods of estimation with current variables
+
+model3 = SVC()
+model3.fit(X_train, Y_train)
+yhat = model3.predict(X_test)
+
+results(Y_test, yhat)
+
+# the overall F1-score is worse using support vectore machines, lets try to optimize hyperparameters using gridsearch
+param_grid = {'C' : [0.1, 1, 10, 100, 1000, 10000], 'gamma': [1, 0.1, 0.01, 0.001, 0.0001, 0.00001]}
+grid = GridSearchCV(estimator=SVC(kernel='rbf'), param_grid=param_grid, verbose=3)
+grid.fit(X_train, Y_train)
+grid.best_params_
+grid.best_estimator_
+yhat = grid.predict(X_test)
+results(Y_test, yhat)
+# the result is still and overall F1 score of 0.74, the model cannot predict a death event well
+# usings a linear kernell, the score equal to logistic regression (0.76) was achieved, however it took a long time
+# to estimate so it was changed back, since logistic regression is better in this case anyway (statistical inference)
+
+# lets try with a random forest classifier
+model4 = RandomForestClassifier(n_estimators=500)
+model4.fit(X_train, Y_train)
+yhat = model4.predict(X_test)
+results(Y_test, yhat)
+# the results are also worse than those of simple logistic regression
+
+# simple KNN
+model5 = KNeighborsClassifier(n_neighbors=5, metric='euclidean')
+model5.fit(X_train, Y_train)
+yhat = model5.predict(X_test)
+results(Y_test, yhat)
+
+# ANN
+i = Input(shape=(3))
+x = Dense(128, activation='relu')(i)
+x = Dropout(0.1)(x)
+x = Dense(64, activation='relu')(x)
+x = Dropout(0.1)(x)
+x = Dense(1, activation='sigmoid')(x)
+
+model6 = Model(i, x)
+model6.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', 'AUC'])
+r2 = model6.fit(X_train, Y_train, epochs=30, validation_data=(X_test, Y_test))
+
+# function to plot results/learning curve
+def plot_metric(metric):
+    plt.plot(r2.history[str(metric)], label=str(metric))
+    plt.plot(r2.history['val_'+str(metric)], label='val_'+str(metric))
+    plt.legend()
+
+plot_metric('loss')
+plot_metric('accuracy')
+plot_metric('AUC')
+
+yhat = np.round(model6.predict(X_test))
+results(Y_test, yhat)
+
+# final conclusion is that most methods gave a similar overall F1-score, however because recall on positive predictions
+# is very important (we want to predict actual death events correctly especially). That is why random forest classifier
+# proved to be the most consistent, and the ANN the least consistent (depending on training data, ANN often very rarely
+# predicted a death event leading to high precision but low recall)
+
+model4 = RandomForestClassifier(n_estimators=500)
+model4.fit(X_train, Y_train)
+yhat = model4.predict(X_test)
+results(Y_test, yhat)
+
+# next research could be done:
+# - further simulations on the neural network (different number of layers, units, activation functions etc.)
+# - more statistical inference analysis and feature engineering -> analyze odds/interpretations on simple logistic
+# regression, try more tests (anova, chi-squared tests, likelihood tests) to compare predictive ability of different
+# variables
+# - draw the random forest classifier
+
